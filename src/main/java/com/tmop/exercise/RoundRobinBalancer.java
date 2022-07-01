@@ -6,7 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 public class RoundRobinBalancer {
@@ -17,17 +19,23 @@ public class RoundRobinBalancer {
     private List<String> serverIPs;
     private List<String> activeServers;
 
+    private static int index = 0;
+    private final ReentrantLock lock;
+
     public RoundRobinBalancer(List<String> serverIPs, RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
         this.serverIPs = serverIPs;
         this.activeServers = serverIPs.stream().filter(this::isServerHealthy).collect(Collectors.toList());
+        lock = new ReentrantLock();
     }
 
-    private static Integer index = 0;
+    public List<String> getActiveServers() {
+        return new ArrayList<>(activeServers);
+    }
 
     public String getApplicationApi() {
-        String server = null;
-        synchronized (index) {
+        lock.lock();
+        try {
             if (activeServers.isEmpty()) {
                 return null;
             }
@@ -36,15 +44,22 @@ public class RoundRobinBalancer {
                 return activeServers.get(0);
             }
 
-            int nextIndex = index % activeServers.size();
-            server = activeServers.get(nextIndex);
-            index = nextIndex + 1;
+            if (index >= activeServers.size()) {
+                index = 0;
+            }
+
+            String server = activeServers.get(index);
+            LOGGER.debug("INDEX {} {} {}", index, server, Thread.currentThread().getName());
+            index++;
+
+            return server;
+        } finally {
+            lock.unlock();
         }
-        return server;
     }
 
     @Scheduled(fixedDelayString = "${healthCheck.fixedDelayInMs}")
-    private void checkHealth() {
+    public void checkHealth() {
         LOGGER.info("Running health check for target servers [{}]", serverIPs.size());
         serverIPs.forEach(ip -> {
             if (!isServerHealthy(ip)) {
