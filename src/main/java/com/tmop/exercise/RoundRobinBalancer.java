@@ -1,50 +1,67 @@
 package com.tmop.exercise;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-public class RoundRobinBalancer implements LoadBalancer {
+public class RoundRobinBalancer {
 
-    private List<String> serverList;
-    private RestTemplate restTemplate = new RestTemplate();
+    private static final Logger LOGGER = LoggerFactory.getLogger(RoundRobinBalancer.class);
+
+    private RestTemplate restTemplate;
+    private List<String> serverIPs;
+    private List<String> activeServers;
+
+    public RoundRobinBalancer(List<String> serverIPs, RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+        this.serverIPs = serverIPs;
+        this.activeServers = serverIPs.stream().filter(this::isServerHealthy).collect(Collectors.toList());
+    }
 
     private static Integer index = 0;
 
-    public RoundRobinBalancer(List<String> serverList) {
-        this.serverList = serverList;
-    }
-
-    @Override
     public String getApplicationApi() {
         String server = null;
         synchronized (index) {
-            if (serverList.size() == 1) {
-                return serverList.get(0);
+            if (activeServers.size() == 1) {
+                return activeServers.get(0);
             }
 
-            int nextIndex = index % serverList.size();
-            server = serverList.get(nextIndex);
-            while(!isServerHealthy(server)) {
-                index = nextIndex + 1;
-                nextIndex = index % serverList.size();
-                server = serverList.get(nextIndex);
-            }
+            int nextIndex = index % activeServers.size();
+            server = activeServers.get(nextIndex);
             index = nextIndex + 1;
         }
         return server;
     }
 
+    @Scheduled(fixedDelayString = "${healthCheck.fixedDelayInMs}")
+    private void checkHealth() {
+        LOGGER.info("Running health check for target servers [{}]", serverIPs.size());
+        serverIPs.forEach(ip -> {
+            if (!isServerHealthy(ip)) {
+                activeServers.remove(ip);
+            } else if (!activeServers.contains(ip)) {
+                activeServers.add(ip);
+            }
+        });
+        LOGGER.info("Active servers after health check [{}]", activeServers.size());
+    }
+
     private boolean isServerHealthy(String server) {
         String uri = new StringBuilder("http://").append(server).append("/health").toString();
         try {
-           ResponseEntity<String> responseEntity =
-                   restTemplate.getForEntity(uri, String.class);
-           System.out.println("Health Check: " + uri + " " + responseEntity.getStatusCode().toString());
-           return responseEntity.getStatusCode().is2xxSuccessful();
-       } catch (Exception e) {
-            System.out.println("Health Check: " + uri + " Error");
+            ResponseEntity<String> responseEntity =
+                    restTemplate.getForEntity(uri, String.class);
+            LOGGER.info("Health check response: {} - {}", uri, responseEntity.getStatusCode().toString());
+            return responseEntity.getStatusCode().is2xxSuccessful();
+        } catch (Exception e) {
+            e.printStackTrace();
+            LOGGER.info("Health check error: {} - {}", uri, e.getLocalizedMessage());
             return false;
         }
     }
