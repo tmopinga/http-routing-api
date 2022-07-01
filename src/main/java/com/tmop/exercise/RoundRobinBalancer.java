@@ -28,6 +28,10 @@ public class RoundRobinBalancer {
     public String getApplicationApi() {
         String server = null;
         synchronized (index) {
+            if (activeServers.isEmpty()) {
+                return null;
+            }
+
             if (activeServers.size() == 1) {
                 return activeServers.get(0);
             }
@@ -60,7 +64,6 @@ public class RoundRobinBalancer {
             LOGGER.info("Health check response: {} - {}", uri, responseEntity.getStatusCode().toString());
             return responseEntity.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
-            e.printStackTrace();
             LOGGER.info("Health check error: {} - {}", uri, e.getLocalizedMessage());
             return false;
         }
