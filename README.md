@@ -2,7 +2,7 @@
 
 This API receives HTTP requests and send them to an instance of application API. The API will receive the response from the application API and send it back to the client.
 
-###How to configure the list of Application APIs
+### How to configure the list of Application APIs
 
 Update *serverList* in application.properties.
 Value format should be a comma-separated host:port
@@ -12,13 +12,13 @@ Example
 serverList=localhost:4000,localhost:4001,localhost:4002
 ```
 
-###How does the API choose which Application API to send request to?
+### How does the API choose which Application API to send request to?
 
 The API receives a request and chooses which application API instance to send the request to on a **‘round robin’** basis. Therefore, if you have 3 instances of the application api then the first request goes to instance 1, the second to instance 2, the third to instance 3 etc.
 
-###How would the API handle if one of the Application APIs goes down or goes slowly?
+### How would the API handle if one of the Application APIs goes down or goes slowly?
 
-#####Scheduled Health Check
+##### Scheduled Health Check
 
 A function to check the health of each server in the _serverList_ is scheduled to run every set interval after start up.
 
@@ -43,7 +43,7 @@ Time for Routing API to establish connection to Application API instance
 Time for Application API to return the response to Routing API
 
 
-###For Improvements
+### For Improvements
 - Use of LoadBalancer interface to easily add other implementations other than Round Robin
 - Configurable health check run
 - Configurable health check path
