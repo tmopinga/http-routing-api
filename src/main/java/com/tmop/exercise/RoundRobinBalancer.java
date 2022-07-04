@@ -19,18 +19,23 @@ public class RoundRobinBalancer {
     private List<String> serverIPs;
     private List<String> activeServers;
 
-    private static int index = 0;
+    private static int index;
     private final ReentrantLock lock;
 
     public RoundRobinBalancer(List<String> serverIPs, RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
         this.serverIPs = serverIPs;
         this.activeServers = serverIPs.stream().filter(this::isServerHealthy).collect(Collectors.toList());
-        lock = new ReentrantLock();
+        this.index = 0;
+        this.lock = new ReentrantLock();
     }
 
     public List<String> getActiveServers() {
         return new ArrayList<>(activeServers);
+    }
+
+    public int getIndex() {
+        return index;
     }
 
     public String getApplicationApi() {

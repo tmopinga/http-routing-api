@@ -2,7 +2,9 @@ package com.tmop.exercise;
 
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -46,10 +48,18 @@ public class RoundRobinBalancerTest {
     }
 
     @Test
+    public void testEmptyActiveServers() {
+        when(restTemplate.getForEntity(anyString(), eq(String.class)))
+                .thenReturn(ResponseEntity.internalServerError().build());
+        lb = new RoundRobinBalancer(serverIPs, restTemplate);
+        Assert.assertNull(lb.getApplicationApi());
+        Assert.assertEquals(0, lb.getIndex());
+    }
+
+    @Test
     public void testSyncGetApplicationApiAllActive() {
         when(restTemplate.getForEntity(anyString(), eq(String.class))).thenReturn(ResponseEntity.ok().body("OK"));
         lb = new RoundRobinBalancer(serverIPs, restTemplate);
-
         for (int i = 0; i < 16; i++) {
             String ip = lb.getApplicationApi();
             LOGGER.info("{} {}", i, ip);
@@ -58,28 +68,10 @@ public class RoundRobinBalancerTest {
     }
 
     @Test
-    public void testAsyncGetApplicationApiAllActive() {
-        when(restTemplate.getForEntity(anyString(), eq(String.class))).thenReturn(ResponseEntity.ok().body("OK"));
-        lb = new RoundRobinBalancer(serverIPs, restTemplate);
-
-        System.out.println(lb.getActiveServers());
-        IntStream
-                .range(0, 15)
-                .parallel()
-                .forEach(i ->
-                        System.out.println(
-                                "IP: " + lb.getApplicationApi()
-                                        + " --- Request from Client: " + i
-                                        + " --- [Thread: " + Thread.currentThread().getName() + "]")
-                );
-    }
-
-    @Test
     public void testUnhealthyServer() {
         when(restTemplate.getForEntity(anyString(), eq(String.class)))
                 .thenReturn(ResponseEntity.ok().body("OK"));
         lb = new RoundRobinBalancer(serverIPs, restTemplate);
-
         Assert.assertEquals(lb.getActiveServers().get(0), lb.getApplicationApi());
 
         when(restTemplate.getForEntity(eq("http://" + serverIPs.get(1) + "/health"), eq(String.class)))
@@ -95,4 +87,19 @@ public class RoundRobinBalancerTest {
         Assert.assertEquals(serverIPs.size(), lb.getActiveServers().size());
         Assert.assertEquals(lb.getActiveServers().get(1), lb.getApplicationApi());
     }
+
+    @Test
+    public void testAsyncGetApplicationApiAllActive() {
+        when(restTemplate.getForEntity(anyString(), eq(String.class))).thenReturn(ResponseEntity.ok().body("OK"));
+        lb = new RoundRobinBalancer(serverIPs, restTemplate);
+        IntStream
+                .range(0, 15)
+                .parallel()
+                .forEach(i ->
+                        System.out.println(Thread.currentThread().getName() + " Request " + i + " = " +  lb.getApplicationApi())
+                );
+        Assert.assertEquals(3, lb.getIndex());
+        lb.getApplicationApi();
+        Assert.assertEquals(1, lb.getIndex());
+        }
 }
