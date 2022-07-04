@@ -61,7 +61,6 @@ Time for Routing API to establish connection to Application API instance
 **readTimeoutInMs**
 Time for Application API to return the response to Routing API
 
-
 ### For Improvements
 - Use of LoadBalancer interface to easily add other implementations other than Round Robin
 - Configurable health check run and path

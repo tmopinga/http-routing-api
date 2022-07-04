@@ -54,7 +54,7 @@ public class RoundRobinBalancer {
             }
 
             String server = activeServers.get(index);
-            LOGGER.debug("INDEX {} {} {}", index, server, Thread.currentThread().getName());
+            LOGGER.info("INDEX {} {} {}", index, server, Thread.currentThread().getName());
             index++;
 
             return server;
@@ -66,7 +66,7 @@ public class RoundRobinBalancer {
     @Scheduled(fixedDelayString = "${healthCheck.fixedDelayInMs}")
     public void checkHealth() {
         LOGGER.info("Running health check for target servers [{}]", serverIPs.size());
-        serverIPs.forEach(ip -> {
+        serverIPs.stream().parallel().forEach(ip -> {
             if (!isServerHealthy(ip)) {
                 activeServers.remove(ip);
             } else if (!activeServers.contains(ip)) {
