@@ -16,10 +16,13 @@ This API receives HTTP requests and send them to an instance of application API.
 2. Install dependencies
 
 ```mvn clean install```
+
 3. Update application.properties if necessary
+
 4. Run
 
 ```mvn clean spring-boot:run```
+
 
 ### How to configure the list of Application APIs
 
