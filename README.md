@@ -2,6 +2,25 @@
 
 This API receives HTTP requests and send them to an instance of application API. The API will receive the response from the application API and send it back to the client.
 
+### Getting Started
+#### Prerequisites
+ - Java 11
+ - mvn
+
+#### Installation
+
+1. Clone the repository
+  ```
+  git clone https://github.com/tmopinga/http-routing-api.git
+  ```
+2. Install dependencies
+
+```mvn clean install```
+3. Update application.properties if necessary
+4. Run
+
+```mvn clean spring-boot:run```
+
 ### How to configure the list of Application APIs
 
 Update *serverList* in application.properties.
@@ -45,11 +64,10 @@ Time for Application API to return the response to Routing API
 
 ### For Improvements
 - Use of LoadBalancer interface to easily add other implementations other than Round Robin
-- Configurable health check run
-- Configurable health check path
+- Configurable health check run and path
 - Different class for health check
 
-For considerations/Edge cases
+#### For considerations/Edge cases
 - Unhealthy application instance will be removed from the list and will lose its original position
 - Health check is still running and server returned by RoundRobinBalancer is unreachable
 - Waiting time for each health check to run if there are too many servers in the list
